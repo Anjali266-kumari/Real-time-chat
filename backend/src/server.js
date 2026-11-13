@@ -12,6 +12,7 @@ import messageRoutes from "./routes/message.routes.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import Conversation from "./models/Conversation.models.js";
+import Message from "./models/Message.models.js";
 import jwt from "jsonwebtoken";
 
 dotenv.config();
@@ -53,6 +54,7 @@ app.set("io", io);
 
 // Track online users: userId -> Set of active socket IDs
 const onlineUsers = new Map();
+app.set("onlineUsers", onlineUsers);
 
 io.on("connection", async (socket) => {
   const userId = String(socket.userId);
@@ -81,6 +83,47 @@ io.on("connection", async (socket) => {
 
   // 4. Broadcast updated list of online user IDs to all connected clients
   io.emit("getOnlineUsers", Array.from(onlineUsers.keys()));
+
+  // 5. Mark all undelivered messages for this user as "delivered" and notify senders
+  try {
+    // Find all conversations this user participates in
+    const userConvIds = await Conversation.find({
+      participants: socket.userId,
+    }).select("_id");
+    const convIds = userConvIds.map((c) => c._id);
+
+    // Find all "sent" messages in those conversations NOT sent by this user
+    const undeliveredMessages = await Message.find({
+      conversationId: { $in: convIds },
+      sender: { $ne: socket.userId },
+      status: "sent",
+    });
+
+    if (undeliveredMessages.length > 0) {
+      // Bulk update to "delivered"
+      const messageIds = undeliveredMessages.map((m) => m._id);
+      await Message.updateMany(
+        { _id: { $in: messageIds } },
+        { $set: { status: "delivered" } },
+      );
+
+      // Notify all connected clients about the status change
+      undeliveredMessages.forEach((msg) => {
+        const convIdStr = msg.conversationId.toString();
+        const senderIdStr = msg.sender.toString();
+        io.to(convIdStr).emit("messageStatusUpdate", {
+          messageId: msg._id.toString(),
+          status: "delivered",
+        });
+        io.to(senderIdStr).emit("messageStatusUpdate", {
+          messageId: msg._id.toString(),
+          status: "delivered",
+        });
+      });
+    }
+  } catch (err) {
+    console.error("Error marking messages as delivered:", err.message);
+  }
 
   // Direct request handler for online users list
   socket.on("getOnlineUsers", () => {

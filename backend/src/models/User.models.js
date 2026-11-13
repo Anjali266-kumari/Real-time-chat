@@ -25,6 +25,19 @@ const UserSchema = new mongoose.Schema(
       default: "",
     },
 
+    about: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 200,
+    },
+
+    phoneNumber: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     isOnline: {
       type: Boolean,
       default: false,

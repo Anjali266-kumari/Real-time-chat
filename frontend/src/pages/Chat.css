@@ -155,7 +155,8 @@
 }
 
 @keyframes pulseDot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -352,7 +353,11 @@
 }
 
 .conversation-item.active {
-  background: linear-gradient(90deg, rgba(99, 102, 241, 0.16) 0%, rgba(99, 102, 241, 0.04) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(99, 102, 241, 0.16) 0%,
+    rgba(99, 102, 241, 0.04) 100%
+  );
   border-color: rgba(99, 102, 241, 0.35);
   box-shadow: inset 3px 0 0 #6366f1;
 }
@@ -955,6 +960,14 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* Single tick */
+.single-tick {
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 /* Chat Input Bar */
 .chat-input-bar-container {
   padding: 16px 24px 20px 24px;
@@ -1072,7 +1085,9 @@
   color: #e2e8f0 !important;
   font-size: 13.5px !important;
   padding-left: 36px !important;
-  transition: border-color 0.2s, box-shadow 0.2s !important;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s !important;
 }
 .emoji-picker-popup .epr-search-container input:focus {
   border-color: #6366f1 !important;
@@ -1128,7 +1143,9 @@
 /* Individual emoji buttons */
 .emoji-picker-popup .epr-emoji-btn {
   border-radius: 8px !important;
-  transition: transform 0.1s, background 0.1s !important;
+  transition:
+    transform 0.1s,
+    background 0.1s !important;
 }
 .emoji-picker-popup .epr-emoji-btn:hover {
   background: rgba(99, 102, 241, 0.2) !important;
@@ -1379,7 +1396,9 @@
   font-size: 13.5px;
   font-weight: 500;
   text-decoration: none;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
   min-width: 220px;
   max-width: 280px;
   overflow: hidden;
@@ -1483,4 +1502,252 @@
   .no-chat-subtitle {
     font-size: 13.5px;
   }
+}
+
+/* ================= SETTINGS MODAL ================= */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.settings-modal {
+  width: 100%;
+  max-width: 400px;
+  background: #1a1b26;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 24px;
+  color: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: settingsPop 0.2s ease;
+}
+
+@keyframes settingsPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.settings-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.settings-photo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.settings-avatar {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 700;
+  cursor: pointer;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+}
+.settings-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.settings-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.settings-avatar:hover .settings-avatar-overlay {
+  opacity: 1;
+}
+
+.settings-upload-link {
+  background: none;
+  border: none;
+  color: #a78bfa;
+  font-size: 14px;
+  cursor: pointer;
+}
+.settings-upload-link:hover {
+  text-decoration: underline;
+}
+
+.settings-field {
+  margin-bottom: 16px;
+  position: relative;
+}
+.settings-field label {
+  display: block;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.settings-field input,
+.settings-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+}
+.settings-field input:disabled {
+  opacity: 0.6;
+}
+.settings-field textarea:focus {
+  border-color: #8b5cf6;
+}
+.settings-counter {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.settings-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.settings-cancel-btn,
+.settings-save-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.settings-cancel-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.settings-save-btn {
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #fff;
+}
+.settings-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ================= AVATAR IMAGE FIX ================= */
+.user-avatar {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.user-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* ================= PROFILE VIEW ================= */
+.profile-view-modal {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  background: #1a1b26;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 32px 24px 24px;
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: settingsPop 0.2s ease;
+}
+
+.profile-view-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.profile-view-avatar {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  font-weight: 700;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+}
+.profile-view-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-view-name {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+.profile-view-email {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+.profile-view-about {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: #d1d5db;
+  word-break: break-word;
 }

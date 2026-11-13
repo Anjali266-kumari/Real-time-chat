@@ -38,6 +38,13 @@ const messageSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+
+    // Delivery status: "sent" = 1 tick, "delivered" = 2 ticks
+    status: {
+      type: String,
+      enum: ["sent", "delivered"],
+      default: "sent",
+    },
   },
   { timestamps: true },
 );

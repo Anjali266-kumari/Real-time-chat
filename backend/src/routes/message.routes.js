@@ -102,10 +102,19 @@ router.post(
           .json({ message: "Conversation not found or access denied" });
       }
 
+      // Determine if the recipient is online
+      const onlineUsers = req.app.get("onlineUsers");
+      const recipientId = conversation.participants.find(
+        (p) => p.toString() !== senderId.toString(),
+      );
+      const isRecipientOnline =
+        recipientId && onlineUsers && onlineUsers.has(recipientId.toString());
+
       const msgData = {
         conversationId,
         sender: senderId,
         text: hasText ? text.trim() : "",
+        status: isRecipientOnline ? "delivered" : "sent",
       };
 
       if (hasFile) {

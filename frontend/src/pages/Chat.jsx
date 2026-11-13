@@ -83,6 +83,10 @@ function Chat() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null); // { file, previewUrl, type }
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsAbout, setSettingsAbout] = useState("");
+  const [settingsPhoto, setSettingsPhoto] = useState(null); // { file, previewUrl }
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const socketRef = useRef(null);
   const selectedConversationRef = useRef(selectedConversation);
@@ -90,6 +94,8 @@ function Chat() {
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const settingsPhotoInputRef = useRef(null);
+  const [showProfileView, setShowProfileView] = useState(false);
 
   // Check if a user is currently active/online
   const isUserOnline = (userId) => {
@@ -259,6 +265,15 @@ function Chat() {
 
     socket.on("conversationCreated", () => {
       fetchConversations();
+    });
+
+    // Listen for message status updates (sent -> delivered)
+    socket.on("messageStatusUpdate", ({ messageId, status }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          String(msg._id) === String(messageId) ? { ...msg, status } : msg,
+        ),
+      );
     });
 
     return () => {
@@ -576,6 +591,61 @@ function Chat() {
   const currentUserId =
     currentUser?._id || currentUser?.id || currentUser?.userId;
 
+  // ── Settings modal handlers ──
+  const openSettings = () => {
+    setSettingsAbout(currentUser?.about || "");
+    setSettingsPhoto(null);
+    setShowSettings(true);
+  };
+
+  const closeSettings = () => {
+    if (settingsPhoto?.previewUrl)
+      URL.revokeObjectURL(settingsPhoto.previewUrl);
+    setSettingsPhoto(null);
+    setShowSettings(false);
+  };
+
+  const handleSettingsPhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (settingsPhoto?.previewUrl)
+      URL.revokeObjectURL(settingsPhoto.previewUrl);
+    setSettingsPhoto({ file, previewUrl: URL.createObjectURL(file) });
+    e.target.value = "";
+  };
+
+  const handleSaveSettings = async () => {
+    if (savingSettings) return;
+    setSavingSettings(true);
+    try {
+      const formData = new FormData();
+      formData.append("about", settingsAbout);
+      if (settingsPhoto?.file) {
+        formData.append("profilePicture", settingsPhoto.file);
+      }
+
+      const res = await fetch(`${API_BASE}/api/users/profile`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data?.user) {
+        setCurrentUser(data.user);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        closeSettings();
+      } else {
+        alert(data?.message || "Failed to update profile");
+      }
+    } catch (err) {
+      console.error("Save settings error:", err);
+      alert("Failed to update profile");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const quickEmojis = ["👋", "❤️", "😂", "👍", "🔥", "🎉", "🚀", "✨"];
 
   return (
@@ -595,11 +665,24 @@ function Chat() {
           <div className="sidebar-user-info">
             <div
               className="user-avatar"
+              title="View profile"
+              onClick={() => setShowProfileView(true)}
               style={{
-                background: getAvatarGradient(currentUser?.name || "User"),
+                cursor: "pointer",
+                background: currentUser?.profilePicture
+                  ? "none"
+                  : getAvatarGradient(currentUser?.name || "User"),
               }}
             >
-              {getInitials(currentUser?.name || "User")}
+              {currentUser?.profilePicture ? (
+                <img
+                  src={`${API_BASE}${currentUser.profilePicture}`}
+                  alt={currentUser.name}
+                  className="avatar-img"
+                />
+              ) : (
+                getInitials(currentUser?.name || "User")
+              )}
               <span className="online-dot" />
             </div>
             <div className="user-details">
@@ -613,6 +696,25 @@ function Chat() {
             </div>
           </div>
           <div className="sidebar-actions">
+            <button
+              className="icon-btn"
+              title="Settings"
+              onClick={openSettings}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
             <button
               className="icon-btn"
               title={activeTab === "chats" ? "Browse People" : "View Chats"}
@@ -1094,34 +1196,53 @@ function Chat() {
                         )}
                         <div className="message-meta">
                           <span>{formatTime(msg.createdAt)}</span>
-                          {isSentByMe && (
-                            /* Double tick — WhatsApp style */
-                            <svg
-                              className="double-tick"
-                              width="18"
-                              height="11"
-                              viewBox="0 0 18 11"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              {/* First tick (back) */}
-                              <polyline
-                                points="1,5.5 4.5,9 10,2"
-                                stroke="currentColor"
-                                strokeWidth="1.8"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                              {/* Second tick (front, offset right) */}
-                              <polyline
-                                points="6,5.5 9.5,9 15,2"
-                                stroke="currentColor"
-                                strokeWidth="1.8"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          )}
+                          {isSentByMe &&
+                            (msg.status === "delivered" ? (
+                              /* Double tick — recipient is/was online */
+                              <svg
+                                className="double-tick delivered"
+                                width="18"
+                                height="11"
+                                viewBox="0 0 18 11"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                {/* First tick (back) */}
+                                <polyline
+                                  points="1,5.5 4.5,9 10,2"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                {/* Second tick (front, offset right) */}
+                                <polyline
+                                  points="6,5.5 9.5,9 15,2"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            ) : (
+                              /* Single tick — sent but not delivered */
+                              <svg
+                                className="single-tick"
+                                width="14"
+                                height="11"
+                                viewBox="0 0 14 11"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <polyline
+                                  points="1,5.5 4.5,9 12,2"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            ))}
                         </div>
                       </div>
                     </div>
@@ -1332,6 +1453,176 @@ function Chat() {
           </div>
         )}
       </main>
+      {/* ================= SETTINGS MODAL ================= */}
+      {showSettings && (
+        <div className="settings-overlay" onClick={closeSettings}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-header">
+              <h3>Profile Settings</h3>
+              <button
+                className="icon-btn"
+                onClick={closeSettings}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Profile photo picker */}
+            <div className="settings-photo-section">
+              <div
+                className="settings-avatar"
+                style={{
+                  background:
+                    settingsPhoto?.previewUrl || currentUser?.profilePicture
+                      ? "none"
+                      : getAvatarGradient(currentUser?.name || "User"),
+                }}
+                onClick={() => settingsPhotoInputRef.current?.click()}
+                title="Change profile photo"
+              >
+                {settingsPhoto?.previewUrl ? (
+                  <img
+                    src={settingsPhoto.previewUrl}
+                    alt="New profile"
+                    className="avatar-img"
+                  />
+                ) : currentUser?.profilePicture ? (
+                  <img
+                    src={`${API_BASE}${currentUser.profilePicture}`}
+                    alt={currentUser.name}
+                    className="avatar-img"
+                  />
+                ) : (
+                  getInitials(currentUser?.name || "User")
+                )}
+                <div className="settings-avatar-overlay">
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                  <span>Change</span>
+                </div>
+              </div>
+
+              <input
+                ref={settingsPhotoInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleSettingsPhotoSelect}
+              />
+
+              <button
+                type="button"
+                className="settings-upload-link"
+                onClick={() => settingsPhotoInputRef.current?.click()}
+              >
+                Upload new photo
+              </button>
+            </div>
+
+            {/* Fields */}
+            <div className="settings-field">
+              <label>Name</label>
+              <input type="text" value={currentUser?.name || ""} disabled />
+            </div>
+
+            <div className="settings-field">
+              <label>About</label>
+              <textarea
+                rows={3}
+                maxLength={150}
+                placeholder="Hey there! I'm using this chat."
+                value={settingsAbout}
+                onChange={(e) => setSettingsAbout(e.target.value)}
+              />
+              <span className="settings-counter">
+                {settingsAbout.length}/150
+              </span>
+            </div>
+
+            <div className="settings-actions">
+              <button className="settings-cancel-btn" onClick={closeSettings}>
+                Cancel
+              </button>
+              <button
+                className="settings-save-btn"
+                onClick={handleSaveSettings}
+                disabled={savingSettings}
+              >
+                {savingSettings ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= PROFILE VIEW MODAL ================= */}
+      {showProfileView && (
+        <div
+          className="settings-overlay"
+          onClick={() => setShowProfileView(false)}
+        >
+          <div
+            className="profile-view-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="icon-btn profile-view-close"
+              onClick={() => setShowProfileView(false)}
+              title="Close"
+            >
+              ✕
+            </button>
+
+            <div
+              className="profile-view-avatar"
+              style={{
+                background: currentUser?.profilePicture
+                  ? "none"
+                  : getAvatarGradient(currentUser?.name || "User"),
+              }}
+            >
+              {currentUser?.profilePicture ? (
+                <img
+                  src={`${API_BASE}${currentUser.profilePicture}`}
+                  alt={currentUser.name}
+                />
+              ) : (
+                getInitials(currentUser?.name || "User")
+              )}
+            </div>
+
+            <h3 className="profile-view-name">
+              {currentUser?.name || "My Account"}
+            </h3>
+            <p className="profile-view-email">{currentUser?.email}</p>
+            <p className="profile-view-about">
+              {currentUser?.about || "Hey there! I'm using this chat."}
+            </p>
+
+            <button
+              className="settings-save-btn"
+              onClick={() => {
+                setShowProfileView(false);
+                openSettings();
+              }}
+            >
+              Edit profile
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
