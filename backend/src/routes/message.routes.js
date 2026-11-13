@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import Conversation from "../models/Conversation.models.js";
@@ -13,9 +14,16 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Auto-create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, "../../uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log("Created uploads directory:", uploadsDir);
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../../uploads"));
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -25,7 +33,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB limit
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB limit
+  fileFilter: (req, file, cb) => {
+    // Allow images, videos, audio, and common documents
+    const allowed = /image\/|video\/|audio\/|application\/pdf|application\/msword|application\/vnd\.|text\/|application\/zip|application\/x-rar/;
+    if (allowed.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type "${file.mimetype}" is not allowed`));
+    }
+  },
 });
 
 // Classify MIME type into a broad category
@@ -40,7 +57,21 @@ function classifyMime(mime = "") {
 router.post(
   "/:conversationId",
   authMiddleware,
-  upload.single("file"),
+  (req, res, next) => {
+    // Run multer and catch its errors explicitly for clean JSON responses
+    upload.single("file")(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(413).json({ message: "File too large. Maximum size is 50 MB." });
+        }
+        return res.status(400).json({ message: `Upload error: ${err.message}` });
+      }
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  },
   async (req, res) => {
     try {
       const { conversationId } = req.params;

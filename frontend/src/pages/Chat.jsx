@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import "./Chat.css";
+import EmojiPicker, { Theme } from "emoji-picker-react";
 
 const API_BASE = "http://localhost:5000";
 
@@ -208,9 +209,10 @@ function Chat() {
       if (!receivedMsg) return;
 
       const msgConvId = String(
-        (typeof receivedMsg.conversationId === "object" && receivedMsg.conversationId !== null
+        (typeof receivedMsg.conversationId === "object" &&
+        receivedMsg.conversationId !== null
           ? receivedMsg.conversationId._id
-          : receivedMsg.conversationId) || ""
+          : receivedMsg.conversationId) || "",
       );
 
       const currentSelected = selectedConversationRef.current;
@@ -219,7 +221,8 @@ function Chat() {
       // If the received message belongs to current open conversation, append it
       if (currentSelectedId && msgConvId === currentSelectedId) {
         setMessages((prev) => {
-          if (prev.some((m) => String(m._id) === String(receivedMsg._id))) return prev;
+          if (prev.some((m) => String(m._id) === String(receivedMsg._id)))
+            return prev;
           return [...prev, receivedMsg];
         });
       }
@@ -239,8 +242,12 @@ function Chat() {
             return conv;
           });
           return updated.sort((a, b) => {
-            const timeA = new Date(a.lastMessage?.createdAt || a.updatedAt || 0).getTime();
-            const timeB = new Date(b.lastMessage?.createdAt || b.updatedAt || 0).getTime();
+            const timeA = new Date(
+              a.lastMessage?.createdAt || a.updatedAt || 0,
+            ).getTime();
+            const timeB = new Date(
+              b.lastMessage?.createdAt || b.updatedAt || 0,
+            ).getTime();
             return timeB - timeA;
           });
         }
@@ -356,7 +363,9 @@ function Chat() {
   // Helper to get recipient info from a conversation
   const getRecipient = (conv) => {
     if (!conv?.participants || !currentUser) return { name: "User", email: "" };
-    const myId = String(currentUser._id || currentUser.id || currentUser.userId || "");
+    const myId = String(
+      currentUser._id || currentUser.id || currentUser.userId || "",
+    );
     const recipient = conv.participants.find((p) => {
       const pId = String(p?._id || p?.id || p || "");
       return pId && pId !== myId;
@@ -380,7 +389,9 @@ function Chat() {
         // If the conversation already has messages, make sure it's in the list
         if (data.conversation.lastMessage) {
           setConversations((prev) => {
-            if (!prev.some((c) => String(c._id) === String(data.conversation._id))) {
+            if (
+              !prev.some((c) => String(c._id) === String(data.conversation._id))
+            ) {
               return [data.conversation, ...prev];
             }
             return prev;
@@ -403,10 +414,10 @@ function Chat() {
     const type = file.type.startsWith("image/")
       ? "image"
       : file.type.startsWith("video/")
-      ? "video"
-      : file.type.startsWith("audio/")
-      ? "audio"
-      : "document";
+        ? "video"
+        : file.type.startsWith("audio/")
+          ? "audio"
+          : "document";
     setSelectedFile({ file, previewUrl, type });
     // Reset file input so same file can be re-selected
     e.target.value = "";
@@ -420,7 +431,12 @@ function Chat() {
   // Send message
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
-    if ((!inputMessage.trim() && !selectedFile) || !selectedConversation?._id || sending) return;
+    if (
+      (!inputMessage.trim() && !selectedFile) ||
+      !selectedConversation?._id ||
+      sending
+    )
+      return;
 
     const textToSend = inputMessage.trim();
     setInputMessage("");
@@ -464,14 +480,16 @@ function Chat() {
       if (res.ok && data?.data) {
         const sentMsg = data.data;
         const msgConvId = String(
-          (typeof sentMsg.conversationId === "object" && sentMsg.conversationId !== null
+          (typeof sentMsg.conversationId === "object" &&
+          sentMsg.conversationId !== null
             ? sentMsg.conversationId._id
-            : sentMsg.conversationId) || selectedConversation._id
+            : sentMsg.conversationId) || selectedConversation._id,
         );
 
         // Append sent message to state if not already added by socket
         setMessages((prev) => {
-          if (prev.some((m) => String(m._id) === String(sentMsg._id))) return prev;
+          if (prev.some((m) => String(m._id) === String(sentMsg._id)))
+            return prev;
           return [...prev, sentMsg];
         });
 
@@ -489,8 +507,12 @@ function Chat() {
                 : c,
             );
             return updated.sort((a, b) => {
-              const timeA = new Date(a.lastMessage?.createdAt || a.updatedAt || 0).getTime();
-              const timeB = new Date(b.lastMessage?.createdAt || b.updatedAt || 0).getTime();
+              const timeA = new Date(
+                a.lastMessage?.createdAt || a.updatedAt || 0,
+              ).getTime();
+              const timeB = new Date(
+                b.lastMessage?.createdAt || b.updatedAt || 0,
+              ).getTime();
               return timeB - timeA;
             });
           } else {
@@ -706,18 +728,17 @@ function Chat() {
               filteredConversations.map((conv) => {
                 const recipient = getRecipient(conv);
                 const isSelected = selectedConversation?._id === conv._id;
-                const lastMsgText =
-                  conv.lastMessage?.text
-                    ? conv.lastMessage.text
-                    : conv.lastMessage?.fileType === "image"
+                const lastMsgText = conv.lastMessage?.text
+                  ? conv.lastMessage.text
+                  : conv.lastMessage?.fileType === "image"
                     ? "📷 Photo"
                     : conv.lastMessage?.fileType === "video"
-                    ? "🎥 Video"
-                    : conv.lastMessage?.fileType === "audio"
-                    ? "🎵 Audio"
-                    : conv.lastMessage?.fileType === "document"
-                    ? `📎 ${conv.lastMessage?.fileName || "File"}`
-                    : "No messages yet";
+                      ? "🎥 Video"
+                      : conv.lastMessage?.fileType === "audio"
+                        ? "🎵 Audio"
+                        : conv.lastMessage?.fileType === "document"
+                          ? `📎 ${conv.lastMessage?.fileName || "File"}`
+                          : "No messages yet";
                 const lastMsgTime = conv.lastMessage?.createdAt
                   ? formatTime(conv.lastMessage.createdAt)
                   : "";
@@ -1003,11 +1024,18 @@ function Chat() {
                           {getInitials(activeRecipient?.name)}
                         </div>
                       )}
-                      <div className={`message-bubble${
-                          msg.fileType === "image" && !msg.text ? " image-only" :
-                          (msg.fileType === "document" || msg.fileType === "video" || msg.fileType === "audio") && !msg.text ? " file-only" :
-                          ""
-                        }`}>
+                      <div
+                        className={`message-bubble${
+                          msg.fileType === "image" && !msg.text
+                            ? " image-only"
+                            : (msg.fileType === "document" ||
+                                  msg.fileType === "video" ||
+                                  msg.fileType === "audio") &&
+                                !msg.text
+                              ? " file-only"
+                              : ""
+                        }`}
+                      >
                         {/* File attachment rendering */}
                         {msg.fileUrl && msg.fileType === "image" && (
                           <a
@@ -1045,14 +1073,25 @@ function Chat() {
                             download={msg.fileName}
                             className="msg-file-link"
                           >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
                               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                               <polyline points="14 2 14 8 20 8" />
                             </svg>
                             <span>{msg.fileName || "Download file"}</span>
                           </a>
                         )}
-                        {msg.text && <div className="message-text">{msg.text}</div>}
+                        {msg.text && (
+                          <div className="message-text">{msg.text}</div>
+                        )}
                         <div className="message-meta">
                           <span>{formatTime(msg.createdAt)}</span>
                           {isSentByMe && (
@@ -1096,20 +1135,19 @@ function Chat() {
             <div className="chat-input-bar-container">
               {showEmojiPicker && (
                 <div className="emoji-picker-popup">
-                  {quickEmojis.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      className="quick-emoji-item"
-                      onClick={() => {
-                        setInputMessage((prev) => prev + emoji);
-                        setShowEmojiPicker(false);
-                        inputRef.current?.focus({ preventScroll: true });
-                      }}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
+                  <EmojiPicker
+                    onEmojiClick={(emojiData) => {
+                      setInputMessage((prev) => prev + emojiData.emoji);
+                      inputRef.current?.focus({ preventScroll: true });
+                    }}
+                    theme={Theme.DARK}
+                    colorScheme="dark"
+                    lazyLoadEmojis
+                    width={320}
+                    height={420}
+                    searchPlaceholder="Search emojis..."
+                    previewConfig={{ showPreview: true }}
+                  />
                 </div>
               )}
 
@@ -1117,10 +1155,23 @@ function Chat() {
               {selectedFile && (
                 <div className="file-preview-strip">
                   {selectedFile.type === "image" ? (
-                    <img src={selectedFile.previewUrl} alt="preview" className="file-preview-img" />
+                    <img
+                      src={selectedFile.previewUrl}
+                      alt="preview"
+                      className="file-preview-img"
+                    />
                   ) : (
                     <div className="file-preview-doc">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                         <polyline points="14 2 14 8 20 8" />
                       </svg>

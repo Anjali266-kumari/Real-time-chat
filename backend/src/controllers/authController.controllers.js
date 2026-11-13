@@ -2,6 +2,44 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.models.js";
 import jwt from "jsonwebtoken";
 
+// FORGOT PASSWORD (direct reset – no email token needed for local dev)
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({
+        message: "Please provide email and new password",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message: "New password must be at least 6 characters",
+      });
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "No account found with this email address",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({
+      message: "Password reset successfully. You can now log in.",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
