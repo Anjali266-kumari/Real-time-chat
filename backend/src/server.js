@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoute.routes.js";
 import userRoutes from "./routes/user.routes.js";
@@ -13,6 +15,9 @@ import Conversation from "./models/Conversation.models.js";
 import jwt from "jsonwebtoken";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -46,12 +51,46 @@ io.use((socket, next) => {
 
 app.set("io", io);
 
-io.on("connection", (socket) => {
-  console.log("Authenticated user connected:", socket.userId);
+// Track online users: userId -> Set of active socket IDs
+const onlineUsers = new Map();
 
-  // Join a conversation only if the user is a participant
+io.on("connection", async (socket) => {
+  const userId = String(socket.userId);
+  console.log("Authenticated user connected:", userId);
+
+  // 1. Join user's personal room so events can be delivered directly to this user
+  socket.join(userId);
+
+  // 2. Track online users
+  if (!onlineUsers.has(userId)) {
+    onlineUsers.set(userId, new Set());
+  }
+  onlineUsers.get(userId).add(socket.id);
+
+  // 3. Automatically join all conversation rooms the user participates in
+  try {
+    const userConvs = await Conversation.find({
+      participants: socket.userId,
+    }).select("_id");
+    userConvs.forEach((conv) => {
+      socket.join(conv._id.toString());
+    });
+  } catch (err) {
+    console.error("Auto-joining conversations error:", err.message);
+  }
+
+  // 4. Broadcast updated list of online user IDs to all connected clients
+  io.emit("getOnlineUsers", Array.from(onlineUsers.keys()));
+
+  // Direct request handler for online users list
+  socket.on("getOnlineUsers", () => {
+    socket.emit("getOnlineUsers", Array.from(onlineUsers.keys()));
+  });
+
+  // Join a conversation room
   socket.on("joinConversation", async (conversationId) => {
     try {
+      if (!conversationId) return;
       const conversation = await Conversation.findById(conversationId);
 
       if (!conversation) {
@@ -70,9 +109,9 @@ io.on("connection", (socket) => {
         });
       }
 
-      socket.join(conversationId);
+      socket.join(conversationId.toString());
 
-      console.log("User joined conversation:", conversationId);
+      console.log(`User ${socket.userId} joined conversation: ${conversationId}`);
     } catch (error) {
       console.error("Join conversation error:", error.message);
     }
@@ -80,11 +119,23 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.userId);
+    if (onlineUsers.has(userId)) {
+      const userSockets = onlineUsers.get(userId);
+      userSockets.delete(socket.id);
+      if (userSockets.size === 0) {
+        onlineUsers.delete(userId);
+      }
+    }
+    io.emit("getOnlineUsers", Array.from(onlineUsers.keys()));
   });
 });
 
 app.use(cors());
 app.use(express.json());
+
+// Serve uploaded files statically
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/conversations", conversationRoutes);

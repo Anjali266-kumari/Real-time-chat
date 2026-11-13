@@ -57,6 +57,19 @@ router.post("/", authMiddleware, async (req, res) => {
       "name email profilePicture",
     );
 
+    const io = req.app.get("io");
+    if (io) {
+      const convIdStr = conversation._id.toString();
+      try {
+        io.in(currentUserId.toString()).socketsJoin(convIdStr);
+        io.in(receiverId.toString()).socketsJoin(convIdStr);
+        io.to(currentUserId.toString()).emit("conversationCreated", conversation);
+        io.to(receiverId.toString()).emit("conversationCreated", conversation);
+      } catch (e) {
+        console.error("Socket join error on conversation creation:", e.message);
+      }
+    }
+
     return res.status(201).json({
       message: "Conversation created successfully",
       conversation,
@@ -74,6 +87,7 @@ router.get("/", authMiddleware, async (req, res) => {
   try {
     const conversations = await Conversation.find({
       participants: req.user.userId,
+      lastMessage: { $ne: null },
     })
       .populate("participants", "name email profilePicture")
       .populate("lastMessage")

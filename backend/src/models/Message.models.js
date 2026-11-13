@@ -16,8 +16,27 @@ const messageSchema = new mongoose.Schema(
 
     text: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
+    },
+
+    // File attachment fields
+    fileUrl: {
+      type: String,
+      default: null,
+    },
+    fileName: {
+      type: String,
+      default: null,
+    },
+    fileType: {
+      // "image" | "video" | "audio" | "document"
+      type: String,
+      default: null,
+    },
+    fileMime: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true },

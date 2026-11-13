@@ -1,67 +1,129 @@
 import express from "express";
 import mongoose from "mongoose";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import Conversation from "../models/Conversation.models.js";
 import Message from "../models/Message.models.js";
 
 const router = express.Router();
 
-// Send a message
-router.post("/:conversationId", authMiddleware, async (req, res) => {
-  try {
-    const { conversationId } = req.params;
-    const { text } = req.body;
-    const senderId = req.user.userId;
+// ── Multer setup ────────────────────────────────────────────────────────────
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-    if (!mongoose.isValidObjectId(conversationId)) {
-      return res.status(400).json({ message: "Invalid conversation ID" });
-    }
-
-    if (typeof text !== "string" || !text.trim()) {
-      return res.status(400).json({ message: "Message text is required" });
-    }
-
-    const conversation = await Conversation.findOne({
-      _id: conversationId,
-      participants: senderId,
-    });
-
-    if (!conversation) {
-      return res.status(404).json({
-        message: "Conversation not found or access denied",
-      });
-    }
-
-    const message = await Message.create({
-      conversationId,
-      sender: senderId,
-      text: text.trim(),
-    });
-
-    conversation.lastMessage = message._id;
-    await conversation.save();
-
-    const populatedMessage = await Message.findById(message._id).populate(
-      "sender",
-      "name email profilePicture",
-    );
-
-    const io = req.app.get("io");
-    if (io) {
-      io.to(conversationId.toString()).emit("receiveMessage", populatedMessage);
-    }
-
-    return res.status(201).json({
-      message: "Message sent successfully",
-      data: populatedMessage,
-    });
-  } catch (error) {
-    console.error("Send message error:", error);
-    return res.status(500).json({ message: "Failed to send message" });
-  }
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../../uploads"));
+  },
+  filename: (req, file, cb) => {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${unique}${path.extname(file.originalname)}`);
+  },
 });
 
-// Get messages for a conversation
+const upload = multer({
+  storage,
+  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB limit
+});
+
+// Classify MIME type into a broad category
+function classifyMime(mime = "") {
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("audio/")) return "audio";
+  return "document";
+}
+
+// ── POST /:conversationId — Send a message (text and/or file) ──────────────
+router.post(
+  "/:conversationId",
+  authMiddleware,
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      const { conversationId } = req.params;
+      const { text } = req.body;
+      const senderId = req.user.userId;
+
+      if (!mongoose.isValidObjectId(conversationId)) {
+        return res.status(400).json({ message: "Invalid conversation ID" });
+      }
+
+      const hasText = typeof text === "string" && text.trim().length > 0;
+      const hasFile = !!req.file;
+
+      if (!hasText && !hasFile) {
+        return res
+          .status(400)
+          .json({ message: "Message must contain text or a file" });
+      }
+
+      const conversation = await Conversation.findOne({
+        _id: conversationId,
+        participants: senderId,
+      });
+
+      if (!conversation) {
+        return res
+          .status(404)
+          .json({ message: "Conversation not found or access denied" });
+      }
+
+      const msgData = {
+        conversationId,
+        sender: senderId,
+        text: hasText ? text.trim() : "",
+      };
+
+      if (hasFile) {
+        msgData.fileUrl = `/uploads/${req.file.filename}`;
+        msgData.fileName = req.file.originalname;
+        msgData.fileMime = req.file.mimetype;
+        msgData.fileType = classifyMime(req.file.mimetype);
+      }
+
+      const message = await Message.create(msgData);
+
+      conversation.lastMessage = message._id;
+      await conversation.save();
+
+      const populatedMessage = await Message.findById(message._id).populate(
+        "sender",
+        "name email profilePicture",
+      );
+
+      const io = req.app.get("io");
+      if (io) {
+        const convIdStr = conversationId.toString();
+
+        // Ensure both participants' sockets are in the conversation room
+        conversation.participants.forEach((p) => {
+          io.in(p.toString()).socketsJoin(convIdStr);
+        });
+
+        // 1. Emit to conversation room (for anyone who has conversation open)
+        io.to(convIdStr).emit("receiveMessage", populatedMessage);
+
+        // 2. Also emit to each participant's user room (guarantees delivery even if conversation room wasn't joined yet)
+        conversation.participants.forEach((p) => {
+          io.to(p.toString()).emit("receiveMessage", populatedMessage);
+        });
+      }
+
+      return res.status(201).json({
+        message: "Message sent successfully",
+        data: populatedMessage,
+      });
+    } catch (error) {
+      console.error("Send message error:", error);
+      return res.status(500).json({ message: "Failed to send message" });
+    }
+  },
+);
+
+// ── GET /:conversationId — Fetch messages ──────────────────────────────────
 router.get("/:conversationId", authMiddleware, async (req, res) => {
   try {
     const { conversationId } = req.params;
@@ -77,9 +139,9 @@ router.get("/:conversationId", authMiddleware, async (req, res) => {
     });
 
     if (!conversation) {
-      return res.status(404).json({
-        message: "Conversation not found or access denied",
-      });
+      return res
+        .status(404)
+        .json({ message: "Conversation not found or access denied" });
     }
 
     const messages = await Message.find({ conversationId })
