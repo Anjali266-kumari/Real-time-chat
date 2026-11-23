@@ -6,10 +6,6 @@
   align-items: center;
   justify-content: center;
   background-color: #080c14;
-  background-image: 
-    radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.08) 0%, transparent 60%);
   padding: 24px 16px;
   position: relative;
   overflow: hidden;
@@ -26,19 +22,9 @@
   opacity: 0.6;
 }
 
-.auth-blob-1 {
-  width: 380px;
-  height: 380px;
-  background: radial-gradient(circle, #6366f1 0%, #4338ca 70%);
-  top: -60px;
-  left: -80px;
-  animation: floatOrb 12s ease-in-out infinite alternate;
-}
-
 .auth-blob-2 {
   width: 320px;
   height: 320px;
-  background: radial-gradient(circle, #8b5cf6 0%, #7c3aed 70%);
   bottom: -40px;
   right: -60px;
   animation: floatOrb 10s ease-in-out infinite alternate-reverse;
@@ -57,7 +43,8 @@
 .auth-grid-pattern {
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 40px 40px;
   pointer-events: none;
@@ -72,7 +59,7 @@
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 
+  box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.6),
     0 0 0 1px rgba(255, 255, 255, 0.05),
     0 0 35px -5px rgba(99, 102, 241, 0.15);
@@ -279,7 +266,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .password-toggle-btn:hover {
@@ -438,7 +427,7 @@
 }
 
 .auth-submit-btn::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
@@ -549,8 +538,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .fp-modal {
@@ -568,8 +561,14 @@
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .fp-close-btn {
@@ -586,9 +585,14 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
-.fp-close-btn:hover { background: rgba(255,255,255,0.12); color: #f1f5f9; }
+.fp-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+}
 
 .fp-icon-wrapper {
   width: 48px;
@@ -626,8 +630,14 @@
 }
 
 @keyframes popIn {
-  from { opacity: 0; transform: scale(0.5); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .fp-back-btn {
@@ -641,7 +651,12 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
   white-space: nowrap;
 }
-.fp-back-btn:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+.fp-back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
