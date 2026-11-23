@@ -26,7 +26,11 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "https://real-time-chat-tau-lyart.vercel.app",
+    ],
     methods: ["GET", "POST"],
   },
 });
@@ -154,7 +158,9 @@ io.on("connection", async (socket) => {
 
       socket.join(conversationId.toString());
 
-      console.log(`User ${socket.userId} joined conversation: ${conversationId}`);
+      console.log(
+        `User ${socket.userId} joined conversation: ${conversationId}`,
+      );
     } catch (error) {
       console.error("Join conversation error:", error.message);
     }
@@ -173,12 +179,18 @@ io.on("connection", async (socket) => {
   });
 });
 
-app.use(cors({
-  origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "https://real-time-chat-tau-lyart.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 // Serve uploaded files statically
