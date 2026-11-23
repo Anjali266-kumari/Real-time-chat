@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 import "./Chat.css";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://real-time-chat-65gl.onrender.com";
 
 // Deterministic vibrant avatar background gradients
 const AVATAR_GRADIENTS = [

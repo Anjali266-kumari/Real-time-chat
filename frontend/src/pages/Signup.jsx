@@ -79,17 +79,20 @@ function Signup() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        "https://real-time-chat-65gl.onrender.com/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            password,
+          }),
         },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          password,
-        }),
-      });
+      );
 
       const data = await response.json();
 
@@ -100,12 +103,15 @@ function Signup() {
       // On successful signup, navigate to login with email prefilled & a friendly message
       navigate("/", {
         state: {
-          message: "Account created successfully! Please sign in with your credentials.",
+          message:
+            "Account created successfully! Please sign in with your credentials.",
           email: email.trim().toLowerCase(),
         },
       });
     } catch (err) {
-      setError(err.message || "Unable to connect to the server. Please try again.");
+      setError(
+        err.message || "Unable to connect to the server. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -139,7 +145,9 @@ function Signup() {
             </svg>
           </div>
           <h1 className="auth-title">Create Account</h1>
-          <p className="auth-subtitle">Join the chat and start messaging in real time</p>
+          <p className="auth-subtitle">
+            Join the chat and start messaging in real time
+          </p>
         </div>
 
         {/* Error Notification */}
@@ -368,7 +376,9 @@ function Signup() {
                 className="password-toggle-btn"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 title={showConfirmPassword ? "Hide password" : "Show password"}
-                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                aria-label={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
               >
                 {showConfirmPassword ? (
                   <svg
